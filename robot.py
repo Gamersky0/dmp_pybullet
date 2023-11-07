@@ -94,9 +94,9 @@ class RobotBase(object):
         for rest_pose, joint_id in zip(self.arm_rest_poses, self.arm_controllable_joints):
             p.resetJointState(self.id, joint_id, rest_pose)
 
-        # Wait for a few steps
-        for _ in range(10):
-            self.step_simulation()
+        # # Wait for a few steps
+        # for _ in range(10):
+        #     self.step_simulation()
 
     def reset_gripper(self):
         self.open_gripper()
@@ -108,6 +108,7 @@ class RobotBase(object):
         self.move_gripper(self.gripper_range[0])
 
     def move_ee(self, action, control_method):
+        # print("DEBUG, action: {}, control_method: {}".format(action, control_method))
         assert control_method in ('joint', 'end')
         if control_method == 'end':
             x, y, z, roll, pitch, yaw = action
@@ -166,8 +167,27 @@ class Panda(RobotBase):
 
 
 class UR5Robotiq85(RobotBase):
+    # 0	world_arm_joint
+    # 1	shoulder_pan_joint
+    # 2	shoulder_lift_joint
+    # 3	elbow_joint
+    # 4	wrist_1_joint
+    # 5	wrist_2_joint
+    # 6	wrist_3_joint
+    # 7	ee_fixed_joint
+    # 8	robotiq_85_base_joint
+    # 9	finger_joint
+    # 10	left_outer_finger_joint
+    # 11	left_inner_finger_joint
+    # 12	left_inner_finger_pad_joint
+    # 13	left_inner_knuckle_joint
+    # 14	right_outer_knuckle_joint
+    # 15	right_outer_finger_joint
+    # 16	right_inner_finger_joint
+    # 17	right_inner_finger_pad_joint
+    # 18	right_inner_knuckle_joint
     def __init_robot__(self):
-        self.eef_id = 7
+        self.eef_id = 17
         self.arm_num_dofs = 6
         self.arm_rest_poses = [-1.5690622952052096, -1.5446774605904932, 1.343946009733127, -1.3708613585093699,
                                -1.5707970583733368, 0.0009377758247187636]

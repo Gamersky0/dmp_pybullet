@@ -1,8 +1,6 @@
 import os
-
 import numpy as np
 import pybullet as p
-
 from tqdm import tqdm
 from env import ClutteredPushGrasp
 from robot import Panda, UR5Robotiq85, UR5Robotiq140
@@ -20,16 +18,17 @@ def user_control_demo():
                     (0, 0, 1),
                     0.1, 5, (320, 320), 40)
     camera = None
-    # robot = Panda((0, 0.5, 0), (0, 0, math.pi))
-    robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
-    env = ClutteredPushGrasp(robot, ycb_models, camera, vis=True)
+    # robot = Panda((0, 0.5, 0), (0, 0, 0))
+    # robot = UR5Robotiq140((0, 0.5, 0), (0, 0, 0))
+    robot_l = UR5Robotiq85((0, 0, 0), (0, 0, 0))
+    robot_r = UR5Robotiq85((0, -0.8, 0), (0, 0, 0))
+
+    env = ClutteredPushGrasp(robot_l, robot_r, ycb_models, camera, vis=True)
 
     env.reset()
-    # env.SIMULATION_STEP_DELAY = 0
-    while True:
-        obs, reward, done, info = env.step(env.read_debug_parameter(), 'end')
-        # print(obs, reward, done, info)
 
+    # # env.SIMULATION_STEP_DELAY = 0
+    env.step()
 
 if __name__ == '__main__':
     user_control_demo()
