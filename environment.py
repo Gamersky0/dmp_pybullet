@@ -115,14 +115,15 @@ class Environment:
 
     def init_Object(self):
         self.clothId = p.loadSoftBody("manipulation/towel.obj", # .obj格式 或 VTK格式
-                                basePosition = [-1, -0.4, 0.5],
+                                # basePosition = [-1, -0.4, 0.5],
+                                basePosition = [-1, -0.4, 0.001],
                                 scale = 1.5,
                                 mass = 0.5, 
                                 collisionMargin = 0.01,
                                 useNeoHookean = 0, 
                                 useBendingSprings=0,
                                 useMassSpring=1, 
-                                springElasticStiffness=100, 
+                                springElasticStiffness=50, 
                                 springDampingStiffness=.1, 
                                 springDampingAllDirections = 1, 
                                 useSelfCollision = 0, 
@@ -131,12 +132,6 @@ class Environment:
                                 )
         p.changeVisualShape(self.clothId, -1, rgbaColor=[0.4, 0.6, 1, 1], flags=p.VISUAL_SHAPE_DOUBLE_SIDED)
         p.resetBasePositionAndOrientation(self.clothId, [-1, -0.4, 0.5], p.getQuaternionFromEuler([0, 0, -np.pi/2.0]))
-        # p.createSoftBodyAnchor(self.clothId, 132, -1, -1)
-        # p.createSoftBodyAnchor(self.clothId, 143, -1, -1)
-        # p.createSoftBodyAnchor(self.clothId, 0, -1, -1)
-        # p.createSoftBodyAnchor(self.clothId, 11, -1, -1)
-        # p.createSoftBodyAnchor(self.clothId, 132, -1, -1)
-        # p.createSoftBodyAnchor(self.clothId, 143, -1, -1)
 
         p.setPhysicsEngineParameter(sparseSdfVoxelSize=0.25)
 

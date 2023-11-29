@@ -3,6 +3,7 @@ import time
 import math
 from datetime import datetime
 import pybullet_data
+import keyboard
 
 ENABLE_TRAJ_FOLLOW_DEBUG = False
 
@@ -64,9 +65,53 @@ def move_to_ready_position(robot, ready_position):
     print("Success move to ready position.")
     return
 
+# Cloth & Box Init
+def cloth_box_init(env):
+    # Init Object
+    env.init_Object()
+    data = p.getMeshData(env.clothId, -1, flags=p.MESH_DATA_SIMULATION_MESH)
+    # print("Index number: ", data[0])
+    # print(data[1][0])
+    # print(data[1][11])
+    boxId_l = p.loadURDF("cube.urdf", data[1][0], globalScaling = 0.001, useMaximalCoordinates = True)
+    boxId_r = p.loadURDF("cube.urdf", data[1][11], globalScaling = 0.001, useMaximalCoordinates = True)
+    p.changeDynamics(boxId_l, -1, mass=0, linearDamping=0.2, angularDamping=0.2)
+    p.changeDynamics(boxId_r, -1, mass=0, linearDamping=0.2, angularDamping=0.2)
+    p.createSoftBodyAnchor(env.clothId, 0, boxId_l, -1, [0, 0, 0.005])
+    p.createSoftBodyAnchor(env.clothId, 11, boxId_r, -1, [0, 0, 0.005])
+    return boxId_l, boxId_r
+
+# Box Move Test in 11.27
+def box_move_test(boxId_l, boxId_r):
+    # 定义轨迹参数
+    start_x = -0.5  # 起始位置
+    end_x = -1.5  # 结束位置
+    speed = 0.1  # 移动速度
+    z = 0.35  # z 坐标不变
+
+    # 运动循环
+    while True:
+        # 获取当前时间
+        current_time = time.time()
+
+        # 计算物体在轨迹上的位置
+        t = (current_time * speed) % 2  # 在 0 到 2 之间循环
+        if t > 1:
+            x = end_x - (t - 1) * (end_x - start_x)
+        else:
+            x = start_x + t * (end_x - start_x)
+
+        # 设置物体的刚体运动状态
+        p.resetBasePositionAndOrientation(boxId_l, [x, -0.07286397145073759, z], [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(boxId_r, [x, -0.7295659481960693, z], [0, 0, 0, 1])
+
+        # 控制循环速率
+        time.sleep(1 / 60.0)
+    return
+
 # 两条轨迹，一个个轨迹点进行跟随
 
-def robot_move(env, robot_l, robot_r, data_l, data_r):
+def robot_move(env, robot_l, robot_r, data_l, data_r, only_box_move):
     TrackIndex = robot_l.eef_id
     p.setRealTimeSimulation(useRealTimeSimulation)
 
@@ -78,47 +123,30 @@ def robot_move(env, robot_l, robot_r, data_l, data_r):
     ready_position_l = trajectory_l.iloc[0]
     ready_position_r = trajectory_r.iloc[0]
     
-    # DEBUG:
-    time.sleep(1)
-
     # move to init position
     robot_l.move_ee(robot_l.arm_rest_poses, 'joint')
     robot_r.move_ee(robot_r.arm_rest_poses, 'joint')
-    robot_l.move_gripper(0)
-    robot_r.move_gripper(0)
+    robot_l.move_gripper(0.01)
+    robot_r.move_gripper(0.01)
 
     # DEBUG:
     time.sleep(3)
 
-    # Init Object
-    env.init_Object()
-    data = p.getMeshData(env.clothId, -1, flags=p.MESH_DATA_SIMULATION_MESH)
-    print("Index number: ", data[0])
-    print(data[1][0])
-    print(data[1][11])
-    p.createSoftBodyAnchor(env.clothId, 0, robot_l.id, TrackIndex, [0, 0, 0])
-    p.createSoftBodyAnchor(env.clothId, 11, robot_r.id, TrackIndex, [0, 0, 0])
+    boxId_l, boxId_r = cloth_box_init(env)
 
-    # # move to ready position
-    # pos_l = data[1][0]
-    # pos_r = data[1][11]
-    # orn_l = [math.pi, 0, 0]
-    # orn_r = [math.pi, 0, 0]
-    # # orn_l = [orientation_l.iloc[index,
-    # action_l = list(pos_l) + list(orn_l)
-    # action_r = list(pos_r) + list(orn_r)
+    # 固定刚体 TODO
+    # currentPos, currentOrn = p.getBasePositionAndOrientation(boxId_l)
+    # cid = p.createConstraint(boxId_l, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], currentPos, [0,0,0])
+    # constraint_r = p.createConstraint(boxId_r, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], data[1][0], [0, 0, 0])
 
-    # robot_l.move_ee(action_l, 'end')
-    # robot_r.move_ee(action_r, 'end')
+    # 获得刚体位置
+    currentPos_l, currentOrn_l = p.getBasePositionAndOrientation(boxId_l)
+    currentPos_r, currentOrn_r = p.getBasePositionAndOrientation(boxId_r)
+    print("boxId_l currentPos_l: ", currentPos_l)
+    print("boxId_r currentPos_r: ", currentPos_r)
 
-    # time.sleep(3)
-
-    Track_LinkState_L = p.getLinkState(robot_l.id, TrackIndex)
-    Track_LinkState_R = p.getLinkState(robot_l.id, TrackIndex)
-    print("Track_LinkState_L:", Track_LinkState_L)
-    print("Track_LinkState_R:", Track_LinkState_R)
-
-    # offset = Track_LinkState_L[0] - data[1][0]
+    # # Box Move Test in 11.27
+    # box_move_test(boxId_l, boxId_r)
 
 
     # announcement
@@ -134,11 +162,6 @@ def robot_move(env, robot_l, robot_r, data_l, data_r):
         # if ENABLE_TRAJ_FOLLOW_DEBUG:
         #     print("count: ", count)
 
-        # p.getCameraImage(320,
-        #                 200,
-        #                 flags=p.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
-        #                 renderer=p.ER_BULLET_HARDWARE_OPENGL)
-
         if (useSimulation and useRealTimeSimulation == 0):
             p.stepSimulation()
 
@@ -153,18 +176,22 @@ def robot_move(env, robot_l, robot_r, data_l, data_r):
             # orn_r = [0, math.pi / 2,  0]
             # orn_l = [0, 0, -math.pi / 2]
             # orn_r = [0, 0, -math.pi / 2]
-            orn_l = [math.pi, 0, 0]
-            orn_r = [math.pi, 0, 0]
+            orn_l = [math.pi, 0, -math.pi / 2]
+            orn_r = [math.pi, 0, -math.pi / 2]
             # orn_l = [orientation_l.iloc[index, 0], orientation_l.iloc[index, 1], orientation_l.iloc[index, 2]]
             # orn_r = [orientation_r.iloc[index, 0], orientation_r.iloc[index, 1], orientation_r.iloc[index, 2]]            
 
             action_l = list(pos_l) + list(orn_l)
             action_r = list(pos_r) + list(orn_r)
 
+
+            if only_box_move:
+                p.resetBasePositionAndOrientation(boxId_l, list(pos_l), [0, 0, 0, 1])
+                p.resetBasePositionAndOrientation(boxId_r, list(pos_r), [0, 0, 0, 1])
+
             if (useNullSpace == 1) and (useOrientation == 1): # only use this
                 robot_l.move_ee(action_l, 'end')
                 robot_r.move_ee(action_r, 'end')
-
                 # jointPoses_l = p.calculateInverseKinematics(armId_l, kukaEndEffectorIndex, pos_l, orientation_l, ll, ul, jr, rp)
                 # jointPoses_r = p.calculateInverseKinematics(armId_r, kukaEndEffectorIndex, pos_r, orientation_r, ll, ul, jr, rp)
 
