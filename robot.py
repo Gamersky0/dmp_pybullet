@@ -108,7 +108,10 @@ class RobotBase(object):
         self.move_gripper(self.gripper_range[0])
 
     def move_ee(self, action, control_method):
-        print("DEBUG, action: {}, control_method: {}".format(action, control_method))
+        # MOVE_EE DEBUG:
+        MOVE_DEBUG = True
+        if MOVE_DEBUG:
+            print("DEBUG, action: {}, control_method: {}".format(action, control_method))
         assert control_method in ('joint', 'end')
         if control_method == 'end':
             x, y, z, roll, pitch, yaw = action

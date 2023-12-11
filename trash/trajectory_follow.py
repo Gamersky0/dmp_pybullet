@@ -28,8 +28,6 @@ if __name__ == '__main__':
             ENABLE_MOVE = False
         if arg.lower() == "box":
             ONLY_BOX_MOVE = True
-        if arg.lower() == "time":
-            TIME_FEEDBACK = True
 
     robot_l = UR5Robotiq85((0, 0, 0), (0, 0, -math.pi / 2))
     robot_r = UR5Robotiq85((0, -0.6, 0), (0, 0, -math.pi / 2))
@@ -37,22 +35,30 @@ if __name__ == '__main__':
     # robot_l.reset()
     # robot_r.reset() # 卸力
 
+    # data = p.getMeshData(env.clothId, -1, flags=p.MESH_DATA_SIMULATION_MESH)
+    # # print("data=",data)
+    # print(data[0])
+    # print(data[1][0])
+    # print(data[1][11])
+    # p.createSoftBodyAnchor(env.clothId, 132, robot_l.id, -1, [0, 0, 0])
+    # p.createSoftBodyAnchor(env.clothId, 143,robot_r.id, -1, [0, 0, 0])
+    # p.createSoftBodyAnchor(env.clothId, 0, -1, -1)
+    # p.createSoftBodyAnchor(env.clothId, 11, -1, -1)
+    # p.createSoftBodyAnchor(env.clothId, 132, -1, -1)
+    # p.createSoftBodyAnchor(env.clothId, 143, -1, -1)
+
     if ENABLE_MOVE:
         print("Using move module")
 
-        if TIME_FEEDBACK == False:
-            traj = Trajectory(filename)
+        traj = Trajectory(filename)
 
-            ENABLE_TRAJ_PLOT = True
-            if ENABLE_TRAJ_PLOT:
-                traj.plot_in_bullet(traj.data_l)
-                traj.plot_in_bullet(traj.data_r)
-        else:
-            traj = Trajectory(None) # 实时反馈
+        ENABLE_TRAJ_PLOT = False
+        if ENABLE_TRAJ_PLOT:
+            traj.plot_in_bullet(traj.data_l)
+            traj.plot_in_bullet(traj.data_r)
 
-        # TODO: 从示教轨迹到机械臂轨迹转换
-        # TODO：目前只能同时开始，同时结束
-        pipeline(env, robot_l, robot_r, traj.data_l, traj.data_r)
+        # 同时开始，同时结束
+        robot_move(env, robot_l, robot_r, traj.data_l, traj.data_r, ONLY_BOX_MOVE)
     else:
         print("Using not-move Module")
 

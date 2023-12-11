@@ -21,12 +21,18 @@ ENABLE_DMP_POSE_DEBUG = False
 class Trajectory:
     def __init__(self, filename):
         self.filename = filename
-        self.data_raw = None
-        self.data_scale = None
-        self.read_datafile()
-        self.trajectory_scale()
-        self.data_l = self.data_scale
-        self.data_r = self.map_to_right(self.data_l)
+        if self.filename == None:
+            self.data_raw = None
+            self.data_scale = None
+            self.data_l = None
+            self.data_r = None
+        else:
+            self.data_raw = None
+            self.data_scale = None
+            self.read_datafile()
+            self.trajectory_scale()
+            self.data_l = self.data_scale
+            self.data_r = self.map_to_right(self.data_l)
 
     def read_datafile(self):
         self.data_raw = pd.read_csv(self.filename)

@@ -131,7 +131,7 @@ class Environment:
                                 useFaceContact=1
                                 )
         p.changeVisualShape(self.clothId, -1, rgbaColor=[0.4, 0.6, 1, 1], flags=p.VISUAL_SHAPE_DOUBLE_SIDED)
-        p.resetBasePositionAndOrientation(self.clothId, [-1, -0.4, 0.5], p.getQuaternionFromEuler([0, 0, -np.pi/2.0]))
+        p.resetBasePositionAndOrientation(self.clothId, [-1, -0.4, 0.01], p.getQuaternionFromEuler([0, 0, -np.pi/2.0]))
 
         p.setPhysicsEngineParameter(sparseSdfVoxelSize=0.25)
 
