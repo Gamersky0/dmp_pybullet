@@ -23,6 +23,7 @@ if __name__ == '__main__':
 
     ENABLE_MOVE = True
     ONLY_BOX_MOVE = False
+    TIME_FEEDBACK = False
     for arg in args:    
         if arg.lower() == "notmove":
             ENABLE_MOVE = False
@@ -37,19 +38,18 @@ if __name__ == '__main__':
     # robot_l.reset()
     # robot_r.reset() # 卸力
 
+    if TIME_FEEDBACK == False:
+        traj = Trajectory(filename)
+
+        ENABLE_TRAJ_PLOT = True
+        if ENABLE_TRAJ_PLOT:
+            traj.plot_in_bullet(traj.data_l)
+            traj.plot_in_bullet(traj.data_r)
+    else:
+        traj = Trajectory(None) # 实时反馈
+
     if ENABLE_MOVE:
         print("Using move module")
-
-        if TIME_FEEDBACK == False:
-            traj = Trajectory(filename)
-
-            ENABLE_TRAJ_PLOT = True
-            if ENABLE_TRAJ_PLOT:
-                traj.plot_in_bullet(traj.data_l)
-                traj.plot_in_bullet(traj.data_r)
-        else:
-            traj = Trajectory(None) # 实时反馈
-
         # TODO: 从示教轨迹到机械臂轨迹转换
         # TODO：目前只能同时开始，同时结束
         pipeline(env, robot_l, robot_r, traj.data_l, traj.data_r)
