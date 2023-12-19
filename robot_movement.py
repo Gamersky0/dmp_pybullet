@@ -10,6 +10,8 @@ import select
 import msvcrt
 import io
 import sys
+import re
+
 
 # trailDuration is duration (in seconds) after debug lines will be removed automatically
 # use 0 for no-removal
@@ -151,17 +153,15 @@ class Movement():
 
         target_prevPose_l = [0, 0, 0] # target l
         target_prevPose_r = [0, 0, 0] # target l
-        count = 0
         hasPrevPose = 0
         base_Axis = [-0.2, -0.1 , 0.2]
         while True:
-            count += 1
-
             # 从DMP接收消息
             response_from_a = cpp_process.stdout.readline().strip() # 阻塞读
-            print("Response from DMP:", response_from_a)
+            # print("Response from DMP:", response_from_a)
 
             if default_exe == "single":
+                # TODO: old version, not update yet
                 if not response_from_a.startswith("position:"):
                     continue
                 # 分割字符串获取数字部分 对x, y, z做处理
@@ -192,32 +192,42 @@ class Movement():
                 target_prevPose_r = target_Pos_r
                 hasPrevPose = 1
             else:
-                if response_from_a.startswith("arg_X3"):
-                    # 分割字符串获取数字部分 对x, y, z做处理
-                    numbers = response_from_a.split(':')[1].split()
-                    x_left = base_Axis[0] + float(numbers[0]) * 0.3
-                    y_left = base_Axis[1] + float(numbers[1]) * 0.3
-                    z_left = base_Axis[2] + float(numbers[2]) * 0.3
-                    target_Pos_l = [x_left, y_left, z_left]
+                if not response_from_a.startswith("count"):
+                    continue
+                numbers = re.findall(r':\s*([-+]?\d+(?:\.\d+(?:e[+-]?\d+)?)?)', response_from_a)
+                # print("numbers: ", numbers)
+                count = float(numbers[0])
+                m_Xp = float(numbers[1])
+                m_e = float(numbers[2])
+                m_X3 = [float(numbers[3]), float(numbers[4]), float(numbers[5])]
+                m_X4 = [float(numbers[6]), float(numbers[7]), float(numbers[8])]
+                # print("m_Xp", m_Xp)
+                # print("m_e", m_e)
+                print("m_X3", m_X3)
+                print("m_X4", m_X4)
 
-                    # 画线
-                    if (hasPrevPose):
-                        p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move
-                    target_prevPose_l = target_Pos_l
-                    hasPrevPose = 1
-                elif response_from_a.startswith("arg_X4"):
-                    # 分割字符串获取数字部分 对x, y, z做处理
-                    numbers = response_from_a.split(':')[1].split()
-                    x_right = base_Axis[0] + float(numbers[0]) * 0.3
-                    y_right = base_Axis[1] + float(numbers[1]) * 0.3
-                    z_right = base_Axis[2] + float(numbers[2]) * 0.3
-                    target_Pos_r = [x_right, y_right, z_right]
+                target_Pos_l = [float(numbers[3]) * 0.3 - 0.3, float(numbers[4]) * 0.3 - 0.8, float(numbers[5]) * 0.3 + 0.1]
+                target_Pos_r = [float(numbers[6]) * 0.3 - 0.3, float(numbers[7]) * 0.3 - 0.2, float(numbers[8]) * 0.3 + 0.1]
+                
+                # 运动
+                orn_l = [math.pi, 0, -math.pi / 2]
+                orn_r = [math.pi, 0, -math.pi / 2]
+                action_l = list(target_Pos_l) + list(orn_l)
+                action_r = list(target_Pos_r) + list(orn_r)
+                p.resetBasePositionAndOrientation(self.boxId_l, list(target_Pos_l), [0, 0, 0, 1])
+                p.resetBasePositionAndOrientation(self.boxId_r, list(target_Pos_r), [0, 0, 0, 1])
 
-                    # 画线
-                    if (hasPrevPose):
-                        p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0, 0.3], 1, trailDuration) # l target move
-                    target_prevPose_r = target_Pos_r
-                    hasPrevPose = 1
+                if (useNullSpace == 1) and (useOrientation == 1): # only use this
+                    self.robot_r.move_ee(action_l, 'end')
+                    self.robot_l.move_ee(action_r, 'end')
+
+                # 画线
+                if (hasPrevPose):
+                    p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move 蓝色
+                    p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0.3, 0], 1, trailDuration) # r target move 绿色
+                target_prevPose_l = target_Pos_l
+                target_prevPose_r = target_Pos_r
+                hasPrevPose = 1
 
             # 向DMP发送消息
             message_to_a = "continue"
