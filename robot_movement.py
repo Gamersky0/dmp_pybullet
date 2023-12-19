@@ -8,6 +8,8 @@ import keyboard
 import subprocess
 import select
 import msvcrt
+import io
+import sys
 
 # trailDuration is duration (in seconds) after debug lines will be removed automatically
 # use 0 for no-removal
@@ -129,12 +131,18 @@ class Movement():
         TrackIndex = self.robot_l.eef_id
 
         default_platform = "windows"
+        default_exe = "couple" # single or couple
 
         if default_platform.lower() == "linux":
             cpp_process = subprocess.Popen(["./cpp_program"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
         else:
-            cpp_process = subprocess.Popen(["D:\work\Code\VS2022_Project\DMP_Communication_Test_12111643\single_dmp_test.exe"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
-
+            if default_exe == "single":
+                cpp_process = subprocess.Popen(["D:\work\Code\VS2022_Project\DMP_Communication_Test_12111643\single_dmp_test.exe"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+            else:
+                cpp_process = subprocess.Popen(["D:\Workspace\VS_exe_for_test\CoupleDMP_1213.exe"], 
+                                               stdin=subprocess.PIPE, 
+                                               stdout=subprocess.PIPE, 
+                                               universal_newlines=True)
 
         # Announce start and end point
         message_to_a = "Initialization:0.0, 0.0, 0.0, -1.0, 0.0, 1.0"
@@ -151,51 +159,79 @@ class Movement():
 
             # 从DMP接收消息
             response_from_a = cpp_process.stdout.readline().strip() # 阻塞读
-            if not response_from_a.startswith("position:"):
-                continue
             print("Response from DMP:", response_from_a)
 
-            # 分割字符串获取数字部分 对x, y, z做处理
-            numbers = response_from_a.split(':')[1].split()
-            x = base_Axis[0] + float(numbers[0]) * 0.3
-            y = base_Axis[1] + float(numbers[1]) * 0.3
-            z = base_Axis[2] + float(numbers[2]) * 0.3
-            target_Pos_l = [x, y, z]
-            target_Pos_r = [x, y - 0.6, z]
-            
-            # 运动
-            orn_l = [math.pi, 0, -math.pi / 2]
-            orn_r = [math.pi, 0, -math.pi / 2]
-            action_l = list(target_Pos_l) + list(orn_l)
-            action_r = list(target_Pos_r) + list(orn_r)
-            p.resetBasePositionAndOrientation(self.boxId_l, list(target_Pos_l), [0, 0, 0, 1])
-            p.resetBasePositionAndOrientation(self.boxId_r, list(target_Pos_r), [0, 0, 0, 1])
+            if default_exe == "single":
+                if not response_from_a.startswith("position:"):
+                    continue
+                # 分割字符串获取数字部分 对x, y, z做处理
+                numbers = response_from_a.split(':')[1].split()
+                x = base_Axis[0] + float(numbers[0]) * 0.3
+                y = base_Axis[1] + float(numbers[1]) * 0.3
+                z = base_Axis[2] + float(numbers[2]) * 0.3
+                target_Pos_l = [x, y, z]
+                target_Pos_r = [x, y - 0.6, z]
+                
+                # 运动
+                orn_l = [math.pi, 0, -math.pi / 2]
+                orn_r = [math.pi, 0, -math.pi / 2]
+                action_l = list(target_Pos_l) + list(orn_l)
+                action_r = list(target_Pos_r) + list(orn_r)
+                p.resetBasePositionAndOrientation(self.boxId_l, list(target_Pos_l), [0, 0, 0, 1])
+                p.resetBasePositionAndOrientation(self.boxId_r, list(target_Pos_r), [0, 0, 0, 1])
 
-            if (useNullSpace == 1) and (useOrientation == 1): # only use this
-                self.robot_l.move_ee(action_l, 'end')
-                self.robot_r.move_ee(action_r, 'end')
+                if (useNullSpace == 1) and (useOrientation == 1): # only use this
+                    self.robot_l.move_ee(action_l, 'end')
+                    self.robot_r.move_ee(action_r, 'end')
 
-            # 画线
-            if (hasPrevPose):
-                p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move
-                p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0, 0.3], 1, trailDuration) # r target move
-            target_prevPose_l = target_Pos_l
-            target_prevPose_r = target_Pos_r
-            hasPrevPose = 1
+                # 画线
+                if (hasPrevPose):
+                    p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move
+                    p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0, 0.3], 1, trailDuration) # r target move
+                target_prevPose_l = target_Pos_l
+                target_prevPose_r = target_Pos_r
+                hasPrevPose = 1
+            else:
+                if response_from_a.startswith("arg_X3"):
+                    # 分割字符串获取数字部分 对x, y, z做处理
+                    numbers = response_from_a.split(':')[1].split()
+                    x_left = base_Axis[0] + float(numbers[0]) * 0.3
+                    y_left = base_Axis[1] + float(numbers[1]) * 0.3
+                    z_left = base_Axis[2] + float(numbers[2]) * 0.3
+                    target_Pos_l = [x_left, y_left, z_left]
+
+                    # 画线
+                    if (hasPrevPose):
+                        p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move
+                    target_prevPose_l = target_Pos_l
+                    hasPrevPose = 1
+                elif response_from_a.startswith("arg_X4"):
+                    # 分割字符串获取数字部分 对x, y, z做处理
+                    numbers = response_from_a.split(':')[1].split()
+                    x_right = base_Axis[0] + float(numbers[0]) * 0.3
+                    y_right = base_Axis[1] + float(numbers[1]) * 0.3
+                    z_right = base_Axis[2] + float(numbers[2]) * 0.3
+                    target_Pos_r = [x_right, y_right, z_right]
+
+                    # 画线
+                    if (hasPrevPose):
+                        p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0, 0.3], 1, trailDuration) # l target move
+                    target_prevPose_r = target_Pos_r
+                    hasPrevPose = 1
 
             # 向DMP发送消息
             message_to_a = "continue"
             cpp_process.stdin.write(message_to_a + "\n")    # 写入消息
             cpp_process.stdin.flush()    # 刷新输入流
 
-            # 如果完成 则关闭，这里需要改
-            if count == 2000:
-                message_to_a = "exit"
-                cpp_process.stdin.write(message_to_a + "\n")    # 写入消息
-                cpp_process.stdin.flush()    # 刷新输入流
-                break
+            print("Send 'continue' to DMP exe OK")
 
-            # time.sleep(0.01)
+            # 如果完成 则关闭，这里需要改
+            # if count == 2000:
+            #     message_to_a = "exit"
+            #     cpp_process.stdin.write(message_to_a + "\n")    # 写入消息
+            #     cpp_process.stdin.flush()    # 刷新输入流
+            #     break
 
         # 关闭A程序的输入和输出流，并等待其结束
         cpp_process.stdin.close()

@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     ENABLE_MOVE = True
     ONLY_BOX_MOVE = False
-    TIME_FEEDBACK = False
+    TIME_FEEDBACK = True
     for arg in args:    
         if arg.lower() == "notmove":
             ENABLE_MOVE = False
