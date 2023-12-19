@@ -1,4 +1,5 @@
 import pybullet as p
+import numpy as np
 import time
 import math
 from datetime import datetime
@@ -35,6 +36,11 @@ class Movement():
         self.clothId = None
         self.boxId_l = None
         self.boxId_r = None
+        self.track_X1_index = 4
+        self.track_X2_index = 7
+        self.track_X3_index = 0
+        self.track_X4_index = 11
+        self.count = 0
 
     def move_to_init_position(self):
         self.robot_l.move_ee(self.robot_l.arm_rest_poses, 'joint')
@@ -55,9 +61,8 @@ class Movement():
         self.boxId_r = p.loadURDF("cube.urdf", data[1][11], globalScaling = 0.001, useMaximalCoordinates = True)
         p.changeDynamics(self.boxId_l, -1, mass=0, linearDamping=0.2, angularDamping=0.2)
         p.changeDynamics(self.boxId_r, -1, mass=0, linearDamping=0.2, angularDamping=0.2)
-        p.createSoftBodyAnchor(self.clothId, 0, self.boxId_l, -1, [0, 0, 0.005])
-        p.createSoftBodyAnchor(self.clothId, 11, self.boxId_r, -1, [0, 0, 0.005])
-
+        p.createSoftBodyAnchor(self.clothId, self.track_X3_index, self.boxId_l, -1, [0, 0, 0.005]) # 第0个
+        p.createSoftBodyAnchor(self.clothId, self.track_X4_index, self.boxId_r, -1, [0, 0, 0.005]) # 第12个
     # Option1
     # Follow Trajectory in fixed trajectory
     def trajectory_follow_fixed(self):
@@ -141,7 +146,7 @@ class Movement():
             if default_exe == "single":
                 cpp_process = subprocess.Popen(["D:\work\Code\VS2022_Project\DMP_Communication_Test_12111643\single_dmp_test.exe"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
             else:
-                cpp_process = subprocess.Popen(["D:\Workspace\VS_exe_for_test\CoupleDMP_1213.exe"], 
+                cpp_process = subprocess.Popen(["D:\Workspace\VS_exe_for_test\CoupleDMP_1213_with_predefined_obstacle.exe"], 
                                                stdin=subprocess.PIPE, 
                                                stdout=subprocess.PIPE, 
                                                universal_newlines=True)
@@ -153,12 +158,15 @@ class Movement():
 
         target_prevPose_l = [0, 0, 0] # target l
         target_prevPose_r = [0, 0, 0] # target l
+        track_prePose_X1 = [0, 0, 0]
+        track_prePose_X2 = [0, 0, 0]
         hasPrevPose = 0
         base_Axis = [-0.2, -0.1 , 0.2]
         while True:
             # 从DMP接收消息
             response_from_a = cpp_process.stdout.readline().strip() # 阻塞读
             # print("Response from DMP:", response_from_a)
+            self.count += 1
 
             if default_exe == "single":
                 # TODO: old version, not update yet
@@ -201,10 +209,9 @@ class Movement():
                 m_e = float(numbers[2])
                 m_X3 = [float(numbers[3]), float(numbers[4]), float(numbers[5])]
                 m_X4 = [float(numbers[6]), float(numbers[7]), float(numbers[8])]
-                # print("m_Xp", m_Xp)
-                # print("m_e", m_e)
-                print("m_X3", m_X3)
-                print("m_X4", m_X4)
+                print("m_Xp: {}, m_e: {}".format(m_Xp, m_e))
+                # print("m_X3", m_X3)
+                # print("m_X4", m_X4)
 
                 target_Pos_l = [float(numbers[3]) * 0.3 - 0.3, float(numbers[4]) * 0.3 - 0.8, float(numbers[5]) * 0.3 + 0.1]
                 target_Pos_r = [float(numbers[6]) * 0.3 - 0.3, float(numbers[7]) * 0.3 - 0.2, float(numbers[8]) * 0.3 + 0.1]
@@ -221,10 +228,26 @@ class Movement():
                     self.robot_r.move_ee(action_l, 'end')
                     self.robot_l.move_ee(action_r, 'end')
 
+                data = p.getMeshData(self.clothId, -1, flags=p.MESH_DATA_SIMULATION_MESH)
+
+                u = np.array([data[1][self.track_X1_index][0] - data[1][self.track_X2_index][0],
+                              data[1][self.track_X1_index][1] - data[1][self.track_X2_index][1],
+                              data[1][self.track_X1_index][2] - data[1][self.track_X2_index][2]
+                ])
+                # print("u:", u)
+                y = np.linalg.norm(u)
+                print("Track X1X2 norm:", y)
+                print("Error: ", y - m_Xp)
+
                 # 画线
                 if (hasPrevPose):
+                    if self.count > 200: # 避免刚开始波动造成的影响
+                        p.addUserDebugLine(track_prePose_X1, data[1][self.track_X1_index], [0, 0, 0.3], 1, trailDuration) # l target move 蓝色
+                        p.addUserDebugLine(track_prePose_X2, data[1][self.track_X2_index], [0, 0, 0.3], 1, trailDuration) # l target move 蓝色
                     p.addUserDebugLine(target_prevPose_l, target_Pos_l, [0, 0, 0.3], 1, trailDuration) # l target move 蓝色
                     p.addUserDebugLine(target_prevPose_r, target_Pos_r, [0, 0.3, 0], 1, trailDuration) # r target move 绿色
+                track_prePose_X1 = data[1][self.track_X1_index]
+                track_prePose_X2 = data[1][self.track_X2_index]
                 target_prevPose_l = target_Pos_l
                 target_prevPose_r = target_Pos_r
                 hasPrevPose = 1
@@ -234,7 +257,7 @@ class Movement():
             cpp_process.stdin.write(message_to_a + "\n")    # 写入消息
             cpp_process.stdin.flush()    # 刷新输入流
 
-            print("Send 'continue' to DMP exe OK")
+            # print("Send 'continue' to DMP exe OK")
 
             # 如果完成 则关闭，这里需要改
             # if count == 2000:

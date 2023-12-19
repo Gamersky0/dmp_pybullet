@@ -109,7 +109,7 @@ class RobotBase(object):
 
     def move_ee(self, action, control_method):
         # MOVE_EE DEBUG:
-        MOVE_DEBUG = True
+        MOVE_DEBUG = False
         if MOVE_DEBUG:
             print("DEBUG, action: {}, control_method: {}".format(action, control_method))
         assert control_method in ('joint', 'end')
