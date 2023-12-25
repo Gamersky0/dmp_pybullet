@@ -146,7 +146,7 @@ class Movement():
             if default_exe == "single":
                 cpp_process = subprocess.Popen(["D:\work\Code\VS2022_Project\DMP_Communication_Test_12111643\single_dmp_test.exe"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
             else:
-                cpp_process = subprocess.Popen(["D:\Workspace\VS_exe_for_test\CoupleDMP_1213_with_predefined_obstacle.exe"], 
+                cpp_process = subprocess.Popen(["D:\Workspace\VS_exe_for_test\CoupleDMP_1220_without_obstacle.exe"], 
                                                stdin=subprocess.PIPE, 
                                                stdout=subprocess.PIPE, 
                                                universal_newlines=True)
@@ -205,28 +205,32 @@ class Movement():
                 numbers = re.findall(r':\s*([-+]?\d+(?:\.\d+(?:e[+-]?\d+)?)?)', response_from_a)
                 # print("numbers: ", numbers)
                 count = float(numbers[0])
-                m_Xp = float(numbers[1])
-                m_e = float(numbers[2])
+                m_Xp = float(numbers[1]) # Xp = norm(X1 - X2)
+                m_e = float(numbers[2]) # e = |Xp - Xm|
                 m_X3 = [float(numbers[3]), float(numbers[4]), float(numbers[5])]
                 m_X4 = [float(numbers[6]), float(numbers[7]), float(numbers[8])]
-                print("m_Xp: {}, m_e: {}".format(m_Xp, m_e))
+                # print("m_Xp: {}, m_e: {}".format(m_Xp, m_e))
                 # print("m_X3", m_X3)
                 # print("m_X4", m_X4)
 
-                target_Pos_l = [float(numbers[3]) * 0.3 - 0.3, float(numbers[4]) * 0.3 - 0.8, float(numbers[5]) * 0.3 + 0.1]
-                target_Pos_r = [float(numbers[6]) * 0.3 - 0.3, float(numbers[7]) * 0.3 - 0.2, float(numbers[8]) * 0.3 + 0.1]
+                # target_Pos_l = [float(numbers[3]) * 0.3 - 0.3, float(numbers[4]) * 0.3 - 0.8, float(numbers[5]) * 0.3 + 0.1]
+                # target_Pos_r = [float(numbers[6]) * 0.3 - 0.3, float(numbers[7]) * 0.3 - 0.2, float(numbers[8]) * 0.3 + 0.1]
                 
-                # 运动
-                orn_l = [math.pi, 0, -math.pi / 2]
-                orn_r = [math.pi, 0, -math.pi / 2]
-                action_l = list(target_Pos_l) + list(orn_l)
-                action_r = list(target_Pos_r) + list(orn_r)
-                p.resetBasePositionAndOrientation(self.boxId_l, list(target_Pos_l), [0, 0, 0, 1])
-                p.resetBasePositionAndOrientation(self.boxId_r, list(target_Pos_r), [0, 0, 0, 1])
+                target_Pos_l = [float(numbers[3]), float(numbers[4]), float(numbers[5])]
+                target_Pos_r = [float(numbers[6]), float(numbers[7]), float(numbers[8])]
+                
+                # # 运动
+                # orn_l = [math.pi, 0, -math.pi / 2]
+                # orn_r = [math.pi, 0, -math.pi / 2]
+                # action_l = list(target_Pos_l) + list(orn_l)
+                # action_r = list(target_Pos_r) + list(orn_r)
+                if count > 100:
+                    p.resetBasePositionAndOrientation(self.boxId_l, list(target_Pos_l), [0, 0, 0, 1])
+                    p.resetBasePositionAndOrientation(self.boxId_r, list(target_Pos_r), [0, 0, 0, 1])
 
-                if (useNullSpace == 1) and (useOrientation == 1): # only use this
-                    self.robot_r.move_ee(action_l, 'end')
-                    self.robot_l.move_ee(action_r, 'end')
+                # if (useNullSpace == 1) and (useOrientation == 1): # only use this
+                #     self.robot_r.move_ee(action_l, 'end')
+                #     self.robot_l.move_ee(action_r, 'end')
 
                 data = p.getMeshData(self.clothId, -1, flags=p.MESH_DATA_SIMULATION_MESH)
 
@@ -236,8 +240,8 @@ class Movement():
                 ])
                 # print("u:", u)
                 y = np.linalg.norm(u)
-                print("Track X1X2 norm:", y)
-                print("Error: ", y - m_Xp)
+                # print("Track X1X2 norm:", y)
+                print("真实误差e: ", y - m_Xp)
 
                 # 画线
                 if (hasPrevPose):
@@ -253,7 +257,8 @@ class Movement():
                 hasPrevPose = 1
 
             # 向DMP发送消息
-            message_to_a = "continue"
+            message_to_a = "Xp: " + str(y)
+            # message_to_a = "continue"
             cpp_process.stdin.write(message_to_a + "\n")    # 写入消息
             cpp_process.stdin.flush()    # 刷新输入流
 

@@ -123,7 +123,7 @@ class Environment:
                                 useNeoHookean = 0, 
                                 useBendingSprings=0,
                                 useMassSpring=1, 
-                                springElasticStiffness=50, 
+                                springElasticStiffness=40, 
                                 springDampingStiffness=.1, 
                                 springDampingAllDirections = 1, 
                                 useSelfCollision = 0, 
